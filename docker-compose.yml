@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  idm-vton-api:
+    build: .
+    container_name: idm-vton-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./ckpt:/app/ckpt
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - TORCH_HOME=/app/models
+      - HF_HOME=/app/models/huggingface
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    command: ["python", "api_server.py"]
+
+  model-downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile.downloader
+    container_name: model-downloader
+    volumes:
+      - ./models:/app/models
+      - ./ckpt:/app/ckpt
+    environment:
+      - HF_HOME=/app/models/huggingface
+    profiles:
+      - setup
+    command: ["python", "download_models.py"]
+
+volumes:
+  models:
+  ckpt:
+  uploads:
+  outputs:
